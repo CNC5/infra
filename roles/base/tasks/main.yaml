@@ -1,0 +1,46 @@
+- name: Install basic packages
+  ansible.builtin.apt:
+    name:
+    - fish
+    - htop
+    - tmux
+    - git
+    state: present
+    update_cache: yes
+
+- name: Check that bashrc is /etc/bash.bashrc
+  stat:
+    path: /etc/bash.bashrc
+  register: dot_bashrc
+
+- name: Check that bashrc is /etc/bash/bashrc
+  stat:
+    path: /etc/bash/bashrc
+  register: dir_bashrc
+
+# Fish discourages using it as a login shell,
+# so it will be invoked in bash
+# when bash is started interactively
+- name: Ensure fish is set as the interactive shell (dot bashrc)
+  ansible.builtin.lineinfile:
+    path: /etc/bash.bashrc
+    regexp: '^SELINUX='
+    line: 'if [[ $- == *i* ]]; then fish -C "cd $PWD" && exit; fi'
+  when: dot_bashrc.stat.exists
+
+- name: Ensure fish is set as the interactive shell (dir bashrc)
+  ansible.builtin.lineinfile:
+    path: /etc/bash/bashrc
+    line: 'if [[ $- == *i* ]]; then fish -C "cd $PWD" && exit; fi'
+  when: dir_bashrc.stat.exists
+
+- name: Clone configs
+  ansible.builtin.git:
+    repo: 'https://github.com/CNC5/configs'
+    dest: /tmp/configs
+
+- name: Put fish config
+  ansible.builtin.copy:
+    src: /tmp/configs/fish/aliases
+    dest: /etc/fish/conf.d/aliases.fish
+    remote_src: yes
