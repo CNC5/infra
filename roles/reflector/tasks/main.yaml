@@ -1,0 +1,36 @@
+- name: Clone reflector repository
+  git:
+    repo: "https://github.com/CNC5/reflector"
+    dest: "{{ reflector_data_dir }}"
+    version: main
+
+- name: Ensure templates directory exists
+  file:
+    path: "{{ reflector_data_dir }}/serverops/camo/templates"
+    state: directory
+    mode: '0755'
+
+- name: Download templates
+  get_url:
+    url: https://file.cnc5.dev/templates/NextJSExample.tgz
+    dest: /tmp/templates.tar.gz
+    mode: '0644'
+
+- name: Unpack templates
+  ansible.builtin.unarchive:
+    src: /tmp/templates.tar.gz
+    dest: "{{ reflector_data_dir }}/serverops/camo/templates/"
+    remote_src: true
+
+- name: Write reflector.yaml
+  copy:
+    content: "{{ vars['reflector.yaml'] | to_nice_yaml(indent=2) }}"
+    dest: "{{ reflector_data_dir }}/config.yaml"
+
+- name: (Re)start reflector containers
+  community.docker.docker_compose_v2:
+    project_src: "{{ reflector_data_dir }}/"
+    pull: "{{ 'always' if pull_images | default(false) else 'policy' }}"
+    state: present
+    wait: true
+    wait_timeout: 15
