@@ -1,0 +1,5 @@
+- hosts: reflector
+  roles:
+    - role: base
+    - geerlingguy.docker
+    - role: reflector
