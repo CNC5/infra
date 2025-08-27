@@ -1,0 +1,20 @@
+version: '3.9'
+
+services:
+  xray-server:
+    image: {{ xray_image }}
+    container_name: xray
+    command:
+      - -c
+      - /etc/xray/config.json
+      - run
+    volumes:
+      - $PWD/config.json:/etc/xray/config.json
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    ports:
+      - 127.0.0.1:65055:65055

@@ -1,0 +1,56 @@
+- name: Ensure xray directory exists
+  file:
+    path: "{{ xray_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Template xray docker-compose.yaml
+  ansible.builtin.template:
+    src: docker-compose.yaml.j2
+    dest: "{{ xray_data_dir }}/docker-compose.yaml"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Set xray_locations
+  set_fact:
+    xray_locations: "{{ xray_locations | default([]) + [item.streamSettings.xhttpSettings.path] }}"
+  with_items: "{{ xray_config.inbounds }}"
+
+- name: Write config.json
+  copy:
+    content: "{{ vars['xray_config'] | to_nice_json(indent=2) }}"
+    dest: "{{ xray_data_dir }}/config.json"
+
+- name: (Re)start xray containers
+  community.docker.docker_compose_v2:
+    project_src: "{{ xray_data_dir }}/"
+    state: present
+
+- name: Ensure caddy sites directory exists
+  file:
+    path: "/etc/caddy/sites"
+    state: directory
+    mode: '0755'
+
+- name: Ensure /var/www/html/ directory exists
+  file:
+    path: "/var/www/html"
+    state: directory
+    mode: '0755'
+
+- name: Template xray Caddyfile
+  ansible.builtin.template:
+    src: Caddyray.j2
+    dest: "/etc/caddy/sites/Caddyray-{{ item | replace('/', '') }}"
+    owner: root
+    group: root
+    mode: '0644'
+  vars:
+    xray_location: "{{ item }}"
+  with_items: "{{ xray_locations }}"
+
+- name: Reload caddy
+  ansible.builtin.service:
+    name: caddy
+    state: reloaded
