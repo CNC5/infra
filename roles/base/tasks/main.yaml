@@ -5,6 +5,7 @@
     - htop
     - tmux
     - git
+    - nload
     state: present
     update_cache: yes
 
