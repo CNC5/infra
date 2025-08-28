@@ -1,0 +1,61 @@
+- name: Install utils for caddy installation
+  ansible.builtin.apt:
+    name:
+    - debian-keyring
+    - debian-archive-keyring
+    - apt-transport-https
+    - curl
+    - gpg
+    state: present
+    update_cache: yes
+
+- name: Fetch caddy repo gpg key
+  ansible.builtin.shell:
+    cmd: curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key'
+  register: caddy_gpg
+
+- name: Install caddy repo key
+  command: gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  args:
+    stdin: "{{ caddy_gpg.stdout }}"
+    creates: /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  become: yes
+
+- name: Fetch caddy repo deb
+  ansible.builtin.shell:
+    cmd: curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt'
+  register: caddy_deb
+
+- name: Install caddy repo deb
+  ansible.builtin.shell:
+    cmd: echo '{{ caddy_deb.stdout }}' > /etc/apt/sources.list.d/caddy-stable.list
+  args:
+    creates: /etc/apt/sources.list.d/caddy-stable.list
+  become: yes
+
+- name: chmod gpg key
+  file:
+    dest: /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    mode: o+r
+
+- name: chmod caddy deb
+  file:
+    dest: /etc/apt/sources.list.d/caddy-stable.list
+    mode: o+r
+
+- name: Install caddy
+  ansible.builtin.apt:
+    name:
+    - caddy
+    state: present
+    update_cache: yes
+
+- name: Add Caddyfile
+  ansible.builtin.copy:
+    src: Caddyfile
+    dest: /etc/caddy/Caddyfile
+
+- name: Restart caddy
+  ansible.builtin.service:
+    name: caddy
+    state: restarted
