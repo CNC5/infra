@@ -1,0 +1,39 @@
+- name: "Add authorized keys"
+  authorized_key:
+    user: "root"
+    key: "{{ lookup('file', 'files/'+ item + '.key.pub') }}"
+  with_items: "{{ sudo_users }}"
+
+- name: Change default ssh port
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    line: "Port {{ ssh_port }}"
+
+- name: Disable sshd passwd auth
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    line: "PasswordAuthentication no"
+
+- name: Install F2B
+  apt:
+    name: fail2ban
+
+- name: Install F2B rules
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: reloaded
+
+# defer restart until role completion
+- name: Reload sshd
+  ansible.builtin.service:
+    name: ssh
+    state: restart
+
