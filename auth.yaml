@@ -1,0 +1,9 @@
+- hosts: auth
+
+  vars:
+    sudo_users:
+      - "a"
+    ssh_port: 22
+
+  roles:
+    - role: auth
