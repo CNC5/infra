@@ -1,4 +1,7 @@
 {{ xray_server_name }} {
+	log {
+    output discard
+  }
   root * /var/www/html/
   reverse_proxy {{ xray_location }}* http://127.0.0.1:65055
   file_server
